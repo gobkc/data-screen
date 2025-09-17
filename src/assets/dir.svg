@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 64 64"
+     width="64" height="64"
+     role="img" aria-label="关上的文件夹图标">
+  <style>
+    .body { fill: #b9b9b9; }
+    .tab { fill: #999; }
+    .outline { stroke: #666; stroke-width: 1.5; }
+    .shadow { fill: rgba(0,0,0,0.25); }
+    .detail { stroke: #a0a0a0; stroke-width: 3.2; }
+  </style>
+
+  <rect x="10" y="54" width="44" height="4" rx="2" ry="2" class="shadow"/>
+
+  <rect x="8" y="18" width="48" height="34" rx="2" ry="2" class="body"/>
+
+  <path class="tab" d="M8 18 L20 18 L24 12 L44 12 L48 18 Z" />
+
+  <line x1="14" y1="30" x2="50" y2="30" class="detail"/>
+  <line x1="14" y1="38" x2="46" y2="38" class="detail"/>
+</svg>

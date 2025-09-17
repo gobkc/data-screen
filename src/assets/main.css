@@ -1,0 +1,287 @@
+@import "./base.css";
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: 0px 0px 0px 15px;
+  background-color: var(--ds-theme-bg);
+  color: #2fe29a;
+  height: 30px;
+  overflow-y: hidden;
+}
+
+.main-container {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.sidebar {
+  height: 100%;
+  overflow: auto;
+  padding: 1rem;
+  background-color: var(--ds-theme-bg);
+  color: #fff;
+}
+
+.sidebar.right {
+  flex: 1;
+  background-color: var(--ds-text-editor-bg-color);
+}
+
+.splitter {
+  width: 5px;
+  cursor: ew-resize;
+  background-color: var(--ds-text-editor-bg-color);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.dark-select {
+  width: 220px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--ds-text-lighter);
+  background-color: var(--ds-theme-bg) !important;
+  border: 1px solid var(--ds-border-color); /* 固定灰色边框 */
+  border-radius: 0; /* 无圆角 */
+  appearance: none; /* 移除浏览器默认样式 */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  appearance: none; /* 关键：去掉原生样式 */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* 自定义箭头（灰色） */
+.dark-select {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23AAAAAA'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 6px;
+}
+
+/* 禁止 hover 改变边框或背景 */
+.dark-select:hover {
+  border-color: var(--ds-border-color);
+  background-color: #1a1a1a !important;
+}
+
+/* 禁止 focus 高亮 */
+.dark-select:focus {
+  border-color: var(--ds-border-color);
+  outline: none;
+  box-shadow: none;
+  background-color: var(--ds-theme-bg) !important;
+}
+
+/* 下拉选项统一 dark 风格 */
+.dark-select option {
+  background-color: var(--ds-theme-bg) !important;
+  color: var(--ds-text-lighter);
+}
+
+/* 禁止系统默认蓝色高亮 */
+.dark-select option:checked,
+.dark-select option:focus,
+.dark-select option:hover,
+.dark-select option:active {
+  background-color: var(--ds-theme-bg) !important;
+  color: var(--ds-text-lighter);
+}
+
+/*按钮相关*/
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: var(--ds-text-dark);
+  background-color: var(--ds-border-color);
+}
+
+.ds-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Hover & Active 状态 */
+.ds-btn:hover {
+  background-color: var(--ds-input-highlight);
+}
+
+.ds-btn:active {
+  background-color: var(--ds-selection);
+}
+
+/* 小按钮 */
+.ds-btn-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.ds-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--ds-text-dark);
+}
+
+.ds-pagination button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--ds-border-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: var(--ds-text-dark);
+}
+
+.ds-pagination svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.ds-pagination button:hover {
+  background-color: var(--ds-input-highlight);
+}
+
+.ds-pagination button:disabled {
+  color: var(--ds-text-lighter);
+  cursor: not-allowed;
+}
+
+.ds-pagination input {
+  width: 50px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--ds-border-color);
+  background-color: var(--ds-row-highlight);
+  color: var(--ds-text-dark);
+  text-align: center;
+}
+
+.ds-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
+  color: var(--ds-text-dark);
+}
+
+.ds-icon-btn:hover {
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.ds-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/*tree*/
+.ds-tree {
+  list-style: none;
+  padding-left: 0;
+  font-size: 14px;
+  color: var(--ds-text-dark);
+}
+
+/* 每个节点容器 */
+.ds-tree li {
+  position: relative;
+  padding-left: 20px; /* 左侧空出画竖线的空间 */
+  line-height: 1.6;
+}
+
+/* 竖线表示父子关系 */
+.ds-tree li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8px; /* 线的位置 */
+  width: 1px;
+  height: 100%;
+  background-color: var(--ds-border-color);
+}
+
+/* 横线连接到节点文本 */
+.ds-tree li > .node::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 8px;
+  width: 12px;
+  height: 1px;
+  background-color: var(--ds-border-color);
+}
+
+/* 节点本身 */
+.ds-tree .node {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.ds-tree .node:hover {
+  background-color: var(--ds-input-highlight);
+}
+
+/* 展开/收起箭头 */
+.ds-tree .toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  color: var(--ds-text-light);
+}
+
+.ds-tree .toggle-btn svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+/* 子节点隐藏/显示 */
+.ds-tree ul {
+  list-style: none;
+  padding-left: 0;
+  margin-left: 16px;
+  display: none;
+}
+
+.ds-tree li.expanded > ul {
+  display: block;
+}

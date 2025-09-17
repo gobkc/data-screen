@@ -1,0 +1,143 @@
+:root {
+  --ds-theme-bg: #181818;
+  --ds-theme-base: #fff;
+  --ds-theme-primary: #fad83b;
+  --ds-theme-secondary: #4ad0ff;
+  --ds-text-dark: rgba(255, 255, 255, 0.87);
+  --ds-text: rgba(255, 255, 255, 0.67);
+  --ds-text-light: rgba(255, 255, 255, 0.57);
+  --ds-text-lighter: rgba(255, 255, 255, 0.37);
+  --ds-text-hint: rgba(255, 255, 255, 0.37);
+  --ds-text-disabled: rgba(255, 255, 255, 0.37);
+  --ds-brand-info: #4ad0ff;
+  --ds-brand-success: #15db95;
+  --ds-brand-warning: #ff8d21;
+  --ds-brand-danger: #ff5d59;
+  --ds-brand-default: rgba(255, 255, 255, 0.57);
+  --ds-brand-purple: #9858ff;
+  --ds-brand-pink: #ff78f7;
+  --ds-brand-primary: #fad83b;
+  --ds-brand-secondary: #4ad0ff;
+  --ds-border-color: rgba(255, 255, 255, 0.1);
+  --ds-link-color: rgba(255, 255, 255, 0.87);
+  --ds-placeholder: rgba(255, 255, 255, 0.37);
+  --ds-selection: rgba(250, 216, 59, 0.2);
+  --ds-input-highlight: rgba(255, 255, 255, 0.27);
+  --ds-query-editor-bg: rgb(8.7, 8.7, 8.7);
+  --ds-db-select-text: white;
+  --ds-row-handle-selected: rgb(34.2, 34.2, 34.2);
+  --ds-row-handle-hover: rgb(21.45, 21.45, 21.45);
+  --ds-row-highlight: rgb(11.25, 11.25, 11.25);
+  --ds-row-add: #104633;
+  --ds-row-delete: #8a3937;
+  --ds-row-error: #38201f;
+  --ds-cell-edited: #50492a;
+  --ds-cell-error: #38201f;
+  --ds-cell-success: #104633;
+  --ds-titlebar-bg: transparent;
+  --ds-global-sidebar-bg: transparent;
+  --ds-sidebar-bg: rgb(16.35, 16.35, 16.35);
+  --ds-sidebar-heading-bg: #181818;
+  --ds-tabs-bg: transparent;
+  --ds-grouped-tables-base: rgb(29.1, 29.1, 29.1);
+  --ds-grouped-tables-light: rgb(34.2, 34.2, 34.2);
+  --ds-statusbar-bg: rgba(255, 255, 255, 0.1);
+  --ds-statusbar-text: black;
+  --ds-statusbar-text-default: white;
+  --ds-text-editor-bg-color: rgb(8.7, 8.7, 8.7);
+  --ds-text-editor-error-bg-color: rgba(255, 93, 89, 0.1);
+  --ds-text-editor-error-fg-color: #ff5d59;
+  --ds-text-editor-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-focused-outline-color: transparent;
+  --ds-text-editor-foldgutter-fg-color: rgba(255, 255, 255, 0.37);
+  --ds-text-editor-foldgutter-fg-color-hover: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-gutter-bg-color: rgb(8.7, 8.7, 8.7);
+  --ds-text-editor-gutter-border-color: transparent;
+  --ds-text-editor-highlight-bg-color: rgba(255, 141, 33, 0.3);
+  --ds-text-editor-keyword-fg-color: #ff78f7;
+  --ds-text-editor-variableName-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-variable-2-fg-color: #4ad0ff;
+  --ds-text-editor-selected-bg-color: rgba(255, 255, 255, 0.25);
+  --ds-text-editor-linenumber-fg-color: rgba(255, 255, 255, 0.15);
+  --ds-text-editor-number-fg-color: #fad83b;
+  --ds-text-editor-string-fg-color: #fad83b;
+  --ds-text-editor-cursor-bg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-bracket-fg-color: rgba(255, 255, 255, 0.67);
+  --ds-text-editor-name-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-typeName-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-sql-alias-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-sql-field-fg-color: #4ad0ff;
+  --ds-text-editor-operator-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-punctuation-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-separator-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-type-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-context-menu-bg-color: rgb(36.75, 36.75, 36.75);
+  --ds-text-editor-context-menu-fg-color: rgba(255, 255, 255, 0.87);
+  --ds-text-editor-context-menu-item-bg-color-active: rgb(
+    0,
+    149.1767955801,
+    201.5
+  );
+  --ds-text-editor-context-menu-item-bg-color-hover: rgba(255, 255, 255, 0.05);
+  --ds-text-editor-context-menu-item-fg-color-active: #ffffff;
+  --ds-mongo-shell-mongo-prompt-fg: #fad83b;
+  --ds-mongo-shell-ansi-output-fg: rgba(255, 255, 255, 0.87);
+}
+
+:root {
+  --color-background: var(--ds-theme-bg);
+  --color-background-soft: #f8f8f8;
+  --color-background-mute: #f2f2f2;
+
+  --color-border: rgba(60, 60, 60, 0.12);
+  --color-border-hover: rgba(60, 60, 60, 0.29);
+
+  --color-heading: #2c3e50;
+  --color-text: #2c3e50;
+
+  --section-gap: 160px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: var(--ds-theme-bg);
+    --color-background-soft: var(--ds-text-editor-bg-color);
+    --color-background-mute: var(--ds-statusbar-bg);
+
+    --color-border: var(--ds-text-editor-bg-color);
+    --color-border-hover: var(--ds-statusbar-bg);
+
+    --color-heading: var(--ds-text-dark);
+    --color-text: var(--ds-text-editor-foldgutter-fg-color);
+    --theme: 
+  ;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-background);
+  transition:
+    color 0.3s ease,
+    background-color 0.3s ease;
+  line-height: 1.6;
+  font-family:
+    JetBrains Mono,
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  font-size: 14px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
