@@ -180,7 +180,16 @@
       <!-- right -->
       <div class="sidebar right">
         <h2>Right Panel</h2>
-        <JsonTree :data="sampleData" />
+        <JsonTree :data="jsonData" />
+        <CodeEditor v-model="code" width="100%" height="100%" />
+        <button @click="addRow">新增空行</button>
+        <SimpleGridTable
+          v-model="items"
+          @update="onUpdate"
+          v-on:onSort="sortColumn"
+          @onSelectRow="handleSelectRow"
+          @onDeleteRow="handleDeleteRow"
+        />
       </div>
     </div>
   </div>
@@ -189,23 +198,78 @@
 <script setup lang="ts">
 // import { onMounted, onBeforeUnmount } from "vue";
 import JsonTree from "./components/JsonTree.vue";
+import type { JsonValue } from "./components/JsonTree.vue";
+import SimpleGridTable from "./components/SimpleGridTable.vue";
+import CodeEditor from "./components/CodeEditor.vue";
 import { ref } from "vue";
 
-const sampleData = [
-  {
-    id: 1,
-    name: "Test Company",
-    active: true,
-    employees: [
-      { id: 101, name: "Alice", role: "Developer" },
-      { id: 102, name: "Bob", role: "Designer" },
-    ],
-    address: {
-      city: "Singapore",
-      postal: 123456,
+const code = ref<string>(
+  'console.log("Hello World");\nfunction test() {\n  return 42;\n}',
+);
+
+const jsonData: JsonValue = {
+  id: 1,
+  name: "Test Company",
+  active: true,
+  employees: [
+    {
+      id: 101,
+      name: "Alice",
+      role: "Developer",
+      aaa: "Developer",
+      bbb: `12321312`,
+      ccc: `fdsafsdafa`,
+      ddd: `dfsafds`,
+      eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: `dfsfdsfas`,
     },
-  },
-];
+    { id: 102, name: "Bob", role: "Designer" },
+  ],
+  address: { city: "Singapore", postal: 123456 },
+} satisfies JsonValue;
+
+const items = ref([
+  {
+    id: 101,
+    name: "Alice",
+    role: "Developer",
+    aaa: "Developer",
+    bbb: `12321312`,
+    ccc: `fdsafsdafa`,
+    ddd: `dfsafds`,
+    eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: `dfsfdsfas`,
+  } as Record<string, unknown>,
+  { id: 2, name: "Test Company2", active: false } as Record<string, unknown>,
+  { id: 2, name: "Test Company2", active: false } as Record<string, unknown>,
+]);
+
+interface UpdatePayload {
+  row: number;
+  key: string;
+  value: unknown;
+}
+
+const onUpdate = (payload: UpdatePayload) => {
+  console.log("Cell updated:", payload, items);
+};
+
+function handleSelectRow(rowData: Record<string, unknown>) {
+  console.log("选中的行数据:", rowData);
+}
+function handleDeleteRow(rowData: Record<string, unknown>) {
+  console.log("delete row:", rowData);
+}
+function sortColumn(key: string, sort: string) {
+  console.log("sord:", key, sort);
+}
+// 新增一行空数据（所有 key 清空）
+function addRow() {
+  if (items.value.length > 0) {
+    const keys = Object.keys(items.value[0]);
+    const empty: Record<string, unknown> = {};
+    keys.forEach((k) => (empty[k] = ""));
+    items.value.push(empty);
+  }
+}
 
 const leftWidth = ref(300);
 let isDragging = false;
