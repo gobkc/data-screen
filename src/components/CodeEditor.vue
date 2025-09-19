@@ -13,8 +13,27 @@
         spellcheck="false"
         @input="onInput"
         @keydown="onKeyDown"
+        @paste="onPaste"
         @scroll="syncScroll"
       ></div>
+
+      <!-- 提示框 -->
+      <ul
+        v-if="showSuggestions"
+        class="suggestion-box"
+        :style="{
+          top: suggestionPos.top + 'px',
+          left: suggestionPos.left + 'px',
+        }"
+      >
+        <li
+          v-for="(s, i) in suggestions"
+          :key="i"
+          :class="{ active: i === suggestionIndex }"
+        >
+          {{ s }}
+        </li>
+      </ul>
     </div>
   </div>
 </template>
@@ -39,36 +58,41 @@ export default defineComponent({
   emits: ["update:modelValue"],
   setup(props, { emit }) {
     const editor = ref<HTMLDivElement | null>(null);
-
     const lines = ref<string[]>(props.modelValue.split("\n"));
 
+    /** -------------------- 行号 -------------------- */
     const lineNumbers = computed(() =>
       Array.from({ length: lines.value.length }, (_, i) =>
         (i + 1).toString(),
       ).join("\n"),
     );
 
-    const escapeHtml = (str: string) =>
+    /** -------------------- 高亮 -------------------- */
+    const escapeHtml = (str: string): string =>
       str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-    const highlightLine = (line: string) => {
+    const highlightLine = (line: string): string => {
       if (line === "") return "&nbsp;";
       let html = escapeHtml(line);
+      // 字符串
       html = html.replace(/(".*?"|'.*?')/g, '<span class="string">$1</span>');
+      // 数字
       html = html.replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
+      // 关键字（大小写不敏感）
       html = html.replace(
-        /\b(function|return|const|let|var|if|else)\b/g,
+        /\b(function|return|const|let|var|if|else|select|set|where|insert|update|delete)\b/gi,
         '<span class="keyword">$1</span>',
       );
       return html;
     };
 
-    const syncScroll = () => {
+    /** -------------------- 滚动同步 -------------------- */
+    const syncScroll = (): void => {
       if (!editor.value) return;
-      // No longer need to sync scroll for highlight layer
     };
 
-    const syncLinesFromEditor = () => {
+    /** -------------------- 行数据同步 -------------------- */
+    const syncLinesFromEditor = (): void => {
       if (!editor.value) return;
       const newLines: string[] = [];
       editor.value.childNodes.forEach((node) => {
@@ -84,22 +108,32 @@ export default defineComponent({
       lines.value = newLines;
     };
 
-    const onInput = () => {
+    /** -------------------- 输入事件 -------------------- */
+    const onInput = (): void => {
       syncLinesFromEditor();
       emit("update:modelValue", lines.value.join("\n"));
+      updateSuggestions();
     };
-    const onKeyDown = (e: KeyboardEvent) => {
+
+    /** -------------------- Tab 缩进 -------------------- */
+    const onKeyDown = (e: KeyboardEvent): void => {
       if (!editor.value) return;
-      if (e.key === "Tab" || e.key === "Backspace") {
+
+      // Tab 缩进
+      if (e.key === "Tab") {
         e.preventDefault();
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) return;
         const range = selection.getRangeAt(0);
-        const editorDivs = Array.from(
-          editor.value.children,
-        ) as HTMLDivElement[];
-        const selectedLines: HTMLDivElement[] = [];
 
+        const allDivs = Array.from(
+          editor.value.querySelectorAll("div"),
+        ) as HTMLDivElement[];
+        const editorDivs = allDivs.filter(
+          (d) => d.querySelector("div") === null,
+        );
+
+        const selectedLines: HTMLDivElement[] = [];
         editorDivs.forEach((div) => {
           const divRange = document.createRange();
           divRange.selectNodeContents(div);
@@ -109,54 +143,129 @@ export default defineComponent({
           if (intersects) selectedLines.push(div);
         });
 
-        if (selectedLines.length === 0 && range.startContainer) {
-          const parentDiv = range.startContainer.parentElement;
-          if (parentDiv && parentDiv.parentElement === editor.value)
-            selectedLines.push(parentDiv as HTMLDivElement);
+        if (selectedLines.length === 0) {
+          let node: Node | null = range.startContainer;
+          let el: HTMLElement | null =
+            node.nodeType === Node.ELEMENT_NODE
+              ? (node as HTMLElement)
+              : node.parentElement;
+          while (el && el !== editor.value) {
+            if (
+              el.tagName === "DIV" &&
+              el.querySelector("div") === null &&
+              editor.value.contains(el)
+            ) {
+              selectedLines.push(el as HTMLDivElement);
+              break;
+            }
+            el = el.parentElement;
+          }
         }
 
-        // Adjust the indent for selected lines
+        if (selectedLines.length === 0) return;
+
         selectedLines.forEach((div) => {
           const text = div.innerText;
-          div.innerText = e.shiftKey
+          const newText = e.shiftKey
             ? text.startsWith("  ")
-              ? text.slice(2) // Shift + Tab will decrease indent
+              ? text.slice(2)
               : text
-            : "  " + text; // Tab will increase indent
-        });
-
-        // Re-render the highlighted part
-        selectedLines.forEach((div) => {
-          const highlightedHTML = highlightLine(div.innerText);
-          div.innerHTML = highlightedHTML;
+            : "  " + text;
+          div.textContent = newText;
+          div.innerHTML = highlightLine(newText);
         });
 
         selection.removeAllRanges();
-        if (selectedLines.length > 0) {
-          const newRange = document.createRange();
-          newRange.setStart(selectedLines[0].firstChild || selectedLines[0], 0);
+        const newRange = document.createRange();
+        const first = selectedLines[0];
+        const last = selectedLines[selectedLines.length - 1];
+        const startNode = first.firstChild || first;
+        const endNode = last.firstChild || last;
+        const endOffset =
+          endNode.nodeType === Node.TEXT_NODE
+            ? (endNode.textContent?.length ?? 0)
+            : last.childNodes.length;
 
-          const lastDiv = selectedLines[selectedLines.length - 1];
-          const endOffset = Math.min(
-            lastDiv.textContent?.length ?? 0,
-            range.endOffset,
-          );
-
-          newRange.setEnd(lastDiv.firstChild || lastDiv, endOffset);
-          selection.addRange(newRange);
+        try {
+          newRange.setStart(startNode as Node, 0);
+          newRange.setEnd(endNode as Node, endOffset);
+        } catch {
+          newRange.selectNodeContents(last);
+          newRange.collapse(false);
         }
+        selection.addRange(newRange);
 
         syncLinesFromEditor();
         emit("update:modelValue", lines.value.join("\n"));
       }
+
+      // 输入空格时隐藏提示
+      if (e.key === " ") {
+        hideSuggestions();
+      }
     };
 
-    const renderEditor = () => {
+    /** -------------------- 粘贴 -------------------- */
+    const onPaste = (e: ClipboardEvent): void => {
+      if (!editor.value) return;
+      e.preventDefault();
+
+      const clipboard: DataTransfer | null = e.clipboardData;
+      const rawText = clipboard?.getData("text/plain") ?? "";
+      if (!rawText) return;
+
+      const linesToInsert = rawText.split(/\r?\n/);
+      const htmlParts = linesToInsert.map(
+        (ln) => `<div>${highlightLine(ln)}</div>`,
+      );
+      const htmlToInsert = htmlParts.join("");
+
+      let insertedWithExec = false;
+      try {
+        insertedWithExec = document.execCommand(
+          "insertHTML",
+          false,
+          htmlToInsert,
+        );
+      } catch {
+        insertedWithExec = false;
+      }
+
+      if (!insertedWithExec) {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          const frag = document.createDocumentFragment();
+          linesToInsert.forEach((ln) => {
+            const div = document.createElement("div");
+            div.innerHTML = highlightLine(ln);
+            frag.appendChild(div);
+          });
+          editor.value.appendChild(frag);
+        } else {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const frag = document.createDocumentFragment();
+          linesToInsert.forEach((ln) => {
+            const div = document.createElement("div");
+            div.innerHTML = highlightLine(ln);
+            frag.appendChild(div);
+          });
+          range.insertNode(frag);
+        }
+      }
+
+      setTimeout(() => {
+        syncLinesFromEditor();
+        emit("update:modelValue", lines.value.join("\n"));
+      }, 0);
+    };
+
+    /** -------------------- 渲染 -------------------- */
+    const renderEditor = (): void => {
       if (!editor.value) return;
       editor.value.innerHTML = "";
       lines.value.forEach((line) => {
         const div = document.createElement("div");
-        // Use innerHTML to insert the highlighted HTML directly
         div.innerHTML = highlightLine(line);
         editor.value?.appendChild(div);
       });
@@ -167,9 +276,7 @@ export default defineComponent({
       (newVal) => {
         if (newVal !== lines.value.join("\n")) {
           lines.value = newVal.split("\n");
-          nextTick(() => {
-            renderEditor();
-          });
+          nextTick(() => renderEditor());
         }
       },
     );
@@ -178,13 +285,79 @@ export default defineComponent({
       renderEditor();
     });
 
+    /** -------------------- 提示词功能 -------------------- */
+    const allKeywords = [
+      "SELECT",
+      "SET",
+      "UPDATE",
+      "DELETE",
+      "INSERT",
+      "WHERE",
+      "FROM",
+      "FUNCTION",
+      "RETURN",
+      "CONST",
+      "LET",
+      "VAR",
+      "IF",
+      "ELSE",
+    ];
+    const showSuggestions = ref(false);
+    const suggestions = ref<string[]>([]);
+    const suggestionIndex = ref(0);
+    const suggestionPos = ref({ top: 0, left: 0 });
+
+    const updateSuggestions = (): void => {
+      const sel = window.getSelection();
+      if (!sel || !editor.value) return;
+
+      const textBefore =
+        sel.anchorNode?.textContent?.slice(0, sel.anchorOffset) ?? "";
+      const currentWord = textBefore.split(/\s+/).pop() ?? "";
+
+      if (!currentWord) {
+        hideSuggestions();
+        return;
+      }
+
+      const matches = allKeywords.filter((kw) =>
+        kw.startsWith(currentWord.toUpperCase()),
+      );
+      if (matches.length > 0) {
+        suggestions.value = matches;
+        suggestionIndex.value = 0;
+        showSuggestions.value = true;
+
+        const range = sel.getRangeAt(0).cloneRange();
+        const rect = range.getBoundingClientRect();
+        const editorRect = editor.value.getBoundingClientRect();
+        suggestionPos.value = {
+          top: rect.bottom - editorRect.top,
+          left: rect.left - editorRect.left,
+        };
+      } else {
+        hideSuggestions();
+      }
+    };
+
+    const hideSuggestions = (): void => {
+      showSuggestions.value = false;
+      suggestions.value = [];
+    };
+
     return {
       editor,
       lines,
       lineNumbers,
       onInput,
       onKeyDown,
+      onPaste,
       syncScroll,
+      // suggestions
+      showSuggestions,
+      suggestions,
+      suggestionIndex,
+      suggestionPos,
     };
   },
 });
@@ -252,5 +425,28 @@ export default defineComponent({
 }
 .editor-content .number {
   color: var(--ds-text-editor-number-fg-color);
+}
+
+/* 提示框 */
+.suggestion-box {
+  position: absolute;
+  background: var(--ds-text-editor-context-menu-bg-color);
+  border: 1px solid var(--ds-border-color);
+  list-style: none;
+  padding: 4px;
+  margin: 0;
+  font-size: 12px;
+  z-index: 10;
+  max-height: 150px;
+  overflow-y: auto;
+  color: var(--ds-text-editor-context-menu-fg-color);
+}
+.suggestion-box li {
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.suggestion-box li.active {
+  background-color: var(--ds-selected-bg);
+  color: var(--ds-theme-base);
 }
 </style>
