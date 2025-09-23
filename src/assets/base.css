@@ -20,6 +20,8 @@
   --ds-brand-secondary: #4ad0ff;
   --ds-selected-bg: rgba(74, 208, 255, 0.5);
   --ds-border-color: rgba(255, 255, 255, 0.1);
+  --ds-border-danger-color: #ff5d59;
+  --ds-border-info-color: #4ad0ff;
   --ds-link-color: rgba(255, 255, 255, 0.87);
   --ds-placeholder: rgba(255, 255, 255, 0.37);
   --ds-selection: rgba(250, 216, 59, 0.2);

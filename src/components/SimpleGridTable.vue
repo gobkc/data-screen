@@ -48,13 +48,14 @@
           <td
             v-for="(key, cIdx) in headers"
             :key="cIdx"
-            contenteditable="true"
             spellcheck="false"
             :class="cellClass(rIdx, key)"
+            :contenteditable="true"
             @mousedown="startSelection(rIdx, key, $event)"
             @mouseover="extendSelection(rIdx, key, $event)"
             @mouseup="endSelection"
             @input="onInput($event, rIdx, key)"
+            @blur="onCellBlur($event, rIdx, key)"
           >
             {{ row[key] }}
           </td>
@@ -78,16 +79,21 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: Record<string, unknown>[]): void;
   (e: "update", value: { row: number; key: string; value: unknown }): void;
   (e: "onSelectRow", rowData: Record<string, unknown>): void;
-  (e: "onDeleteRow", rowData: Record<string, unknown>): void;
+  (e: "onDeleteRow", rowData: Record<string, unknown>[]): void;
+  (e: "onUnDelete", rowData: Record<string, unknown>[]): void;
   (e: "onSort", column: string, order: "asc" | "desc"): void;
 }>();
 
 const local = ref<Record<string, unknown>[]>([...props.modelValue]);
+const initialValue = ref<Record<string, unknown>[]>([...props.modelValue]);
 
 watch(
   () => props.modelValue,
   (v) => {
     local.value = [...v];
+    if (initialValue.value.length === 0) {
+      initialValue.value = [...v]; // 只初始化一次
+    }
   },
   { deep: true },
 );
@@ -102,12 +108,36 @@ function getText(e: Event) {
 
 function onInput(e: Event, row: number, key: string) {
   const txt = getText(e);
+
+  // 如果当前行已删除，不更新 local 的值
+  if (isRowDeleted(row)) return;
+
   const next = local.value.map((r, i) =>
     i === row ? { ...r, [key]: txt } : r,
   );
   local.value = next;
   emit("update:modelValue", next);
   emit("update", { row, key, value: txt });
+
+  // 同样处理 updatedRows
+  const original = initialValue.value[row]?.[key];
+  if (txt !== original) updatedRows.value.add(row);
+  else {
+    const rowKeys = Object.keys(next[row]);
+    const hasOtherChanges = rowKeys.some(
+      (k) => next[row][k] !== initialValue.value[row]?.[k],
+    );
+    if (!hasOtherChanges) updatedRows.value.delete(row);
+  }
+}
+
+function onCellBlur(e: FocusEvent, row: number, key: string) {
+  if (!isRowDeleted(row)) return;
+
+  const cell = e.target as HTMLElement;
+  const original = initialValue.value[row]?.[key] ?? "";
+  // 还原单元格内容为原始值
+  cell.innerText = String(local.value[row]?.[key] ?? original);
 }
 
 function cellKey(r: number, k: string) {
@@ -120,7 +150,11 @@ const startCell = ref<{ row: number; col: number } | null>(null);
 const copyBuffer = ref<string[][]>([]);
 
 function cellClass(r: number, k: string) {
-  return selection.value.has(cellKey(r, k)) ? "selected" : "";
+  const classes = [];
+  if (selection.value.has(cellKey(r, k))) classes.push("selected");
+  if (isRowDeleted(r)) classes.push("deleted-row");
+  else if (updatedRows.value.has(r)) classes.push("updated-row");
+  return classes.join(" ");
 }
 
 function startSelection(r: number, k: string, e: MouseEvent) {
@@ -179,16 +213,68 @@ function sortColumn(key: string) {
   emit("onSort", key, next as SortOrder);
 }
 
+// 记录被标记删除的行
+const deletedRows = ref<Set<number>>(new Set());
+
+// 删除边框行类
+function isRowDeleted(r: number) {
+  return deletedRows.value.has(r);
+}
+
+// 标记行删除
+function markRowDeleted(rows: number[]) {
+  rows.forEach((r) => deletedRows.value.add(r));
+}
+
+// 撤销删除
+function undeleteRows(rows?: number[]) {
+  const toUndelete = rows ?? Array.from(deletedRows.value);
+  deletedRows.value = new Set(
+    [...deletedRows.value].filter((r) => !toUndelete.includes(r)),
+  ); // 这里用新的 Set 替换，确保响应式
+  emit(
+    "onUnDelete",
+    toUndelete.map((r) => local.value[r]),
+  );
+}
+
+const updatedRows = ref<Set<number>>(new Set());
+function unmarkUpdatedRows(rows?: number[]) {
+  const toUnmark = rows ?? Array.from(updatedRows.value);
+  toUnmark.forEach((r) => updatedRows.value.delete(r));
+}
+
+defineExpose({
+  undeleteRows,
+  unmarkUpdatedRows,
+});
+
 // 只在表格内部处理 Ctrl+C / Ctrl+V
 function onKeyDown(e: KeyboardEvent) {
   // 删除
-  if (e.key === "Delete") {
+  if (e.key === "Delete" && !e.shiftKey) {
     e.preventDefault();
-    const first = selection.value.values().next().value;
-    if (!first) return;
-    const [rowStr] = first.split("-");
-    const rowIndex = parseInt(rowStr);
-    if (!isNaN(rowIndex)) emit("onDeleteRow", local.value[rowIndex]);
+    const rows = Array.from(selection.value).map((ck) =>
+      parseInt(ck.split("-")[0]),
+    );
+    const uniqueRows = [...new Set(rows)];
+    markRowDeleted(uniqueRows);
+    emit(
+      "onDeleteRow",
+      uniqueRows
+        .map((r) => local.value[r])
+        .filter((row): row is Record<string, unknown> => row !== undefined),
+    );
+  }
+
+  if (e.key === "Delete" && e.shiftKey) {
+    e.preventDefault();
+    const rows = Array.from(selection.value).map((ck) =>
+      parseInt(ck.split("-")[0]),
+    );
+    const uniqueRows = [...new Set(rows)];
+    // 用 undeleteRows 替代 unmarkRowDeleted
+    undeleteRows(uniqueRows);
   }
 
   // 复制
@@ -326,6 +412,14 @@ function onKeyDown(e: KeyboardEvent) {
   outline: none;
   background: var(--ds-text-editor-bg-color);
   color: var(--ds-text);
+}
+
+.deleted-row {
+  background-color: var(--ds-row-delete) !important;
+}
+
+.updated-row {
+  background-color: var(--ds-row-add) !important;
 }
 
 .selected {

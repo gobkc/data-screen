@@ -70,7 +70,7 @@ export default defineComponent({
       html = html.replace(/(".*?"|'.*?')/g, '<span class="string">$1</span>');
       html = html.replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
       html = html.replace(
-        /\b(function|return|const|let|var|if|else|select|from|set|where|insert|update|delete|and|or|left|right|join|on)\b/gi,
+        /\b(function|return|const|let|var|if|else|select|create|view|replace|from|set|where|insert|update|delete|and|or|left|right|join|on)\b/gi,
         '<span class="keyword">$1</span>',
       );
       return html;
@@ -100,6 +100,139 @@ export default defineComponent({
       syncLinesFromEditor();
       emit("update:modelValue", lines.value.join("\n"));
       updateSuggestions();
+    };
+    // 格式化 SQL 函数
+    function formatSQLForSelection(sql: string, indentUnit = "  "): string {
+      const keywords = [
+        "ALL",
+        "SELECT",
+        "FROM",
+        "WHERE",
+        "JOIN",
+        "INNER JOIN",
+        "LEFT JOIN",
+        "RIGHT JOIN",
+        "FULL JOIN",
+        "CROSS JOIN",
+        "ON",
+        "AND",
+        "OR",
+        "GROUP BY",
+        "ORDER BY",
+        "HAVING",
+        "UNION",
+        "UNION ALL",
+        "EXCEPT",
+        "INTERSECT",
+        "LIMIT",
+      ];
+
+      // 清理多余空格
+      let str = sql.replace(/\s+/g, " ").trim();
+
+      // 处理关键字前换行，但 AND / OR 仅在条件子句中换行
+      const pattern = new RegExp(
+        `\\b(${keywords
+          .filter((kw) => kw !== "AND" && kw !== "OR")
+          .sort((a, b) => b.length - a.length)
+          .join("|")})\\b`,
+        "gi",
+      );
+      str = str.replace(pattern, "\n$1");
+
+      // 手动处理 AND / OR
+      str = str.replace(/\b(AND|OR)\b/gi, (match) => {
+        const upper = match.toUpperCase();
+        // 判断当前是否在条件子句
+        // 简单方式：如果前面有 WHERE / ON / HAVING 出现，则认为在条件中
+        const before = str
+          .slice(0, str.indexOf(match))
+          .toUpperCase()
+          .replace(/\n/g, " ");
+        if (
+          /\bWHERE\b/.test(before) ||
+          /\bON\b/.test(before) ||
+          /\bHAVING\b/.test(before)
+        ) {
+          return "\n" + upper;
+        } else {
+          return upper;
+        }
+      });
+
+      const tokens = str
+        .split(/\n/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      const formatted: string[] = [];
+      const indentStack: number[] = [0]; // 缩进堆栈
+
+      tokens.forEach((token) => {
+        let current = token;
+
+        // 处理开括号 '('
+        while (current.includes("(")) {
+          const idx = current.indexOf("(");
+          const before = current.slice(0, idx).trim();
+          if (before) {
+            formatted.push(
+              indentUnit.repeat(indentStack[indentStack.length - 1]) + before,
+            );
+          }
+          formatted.push(
+            indentUnit.repeat(indentStack[indentStack.length - 1]) + "(",
+          );
+          indentStack.push(indentStack[indentStack.length - 1] + 1);
+          current = current.slice(idx + 1).trim();
+        }
+
+        // 处理闭括号 ')'
+        while (current.includes(")")) {
+          const idx = current.indexOf(")");
+          const before = current.slice(0, idx).trim();
+          if (before) {
+            formatted.push(
+              indentUnit.repeat(indentStack[indentStack.length - 1]) + before,
+            );
+          }
+          indentStack.pop();
+          formatted.push(
+            indentUnit.repeat(indentStack[indentStack.length - 1]) + ")",
+          );
+          current = current.slice(idx + 1).trim();
+        }
+
+        // 处理剩余内容
+        if (current) {
+          formatted.push(
+            indentUnit.repeat(indentStack[indentStack.length - 1]) + current,
+          );
+        }
+      });
+
+      return formatted.join("\n");
+    }
+
+    // helper: 找到某个元素内第一个 Text 节点（用于光标定位）
+    const getFirstTextNode = (node: Node | null): Text | null => {
+      if (!node) return null;
+      if (node.nodeType === Node.TEXT_NODE) return node as Text;
+      let cur: Node | null = node.firstChild;
+      while (cur) {
+        if (cur.nodeType === Node.TEXT_NODE) return cur as Text;
+        if (cur.firstChild) {
+          cur = cur.firstChild;
+          continue;
+        }
+        // traverse siblings/upwards
+        while (cur && !cur.nextSibling) {
+          cur = cur.parentNode;
+          if (cur === node) return null;
+        }
+        cur = cur ? cur.nextSibling : null;
+      }
+      return null;
     };
     const onKeyDown = (e: KeyboardEvent): void => {
       if (!editor.value) return;
@@ -168,6 +301,193 @@ export default defineComponent({
           }
         }
       }
+      // ⬇️ 新增 Ctrl+D 功能
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const range = sel.getRangeAt(0);
+
+        // 将要插入的 html（从 cloneContents 或单行 outerHTML）
+        let htmlToInsert = "";
+        let useExec = false;
+
+        if (range.collapsed) {
+          // 光标折叠：复制当前行（editor 的直接子 div）
+          // 找到 editor 的直接子行容器 parentDiv
+          let el: HTMLElement | null = null;
+          const startContainer = range.startContainer;
+          if (startContainer.nodeType === Node.TEXT_NODE) {
+            el = (startContainer.parentElement as HTMLElement) ?? null;
+          } else if (startContainer instanceof HTMLElement) {
+            el = startContainer as HTMLElement;
+          }
+          let parentDiv: HTMLElement | null = null;
+          while (el && el !== editor.value) {
+            if (el.parentElement === editor.value) {
+              parentDiv = el;
+              break;
+            }
+            el = el.parentElement;
+          }
+          // fallback 到第一个子元素
+          if (!parentDiv)
+            parentDiv = editor.value.firstElementChild as HTMLElement | null;
+          if (!parentDiv) return;
+
+          // 使用 outerHTML（保留内部 highlight span）
+          htmlToInsert = parentDiv.outerHTML;
+
+          // 把 selection 移到 parentDiv 之后
+          const insertRange = document.createRange();
+          insertRange.setStartAfter(parentDiv);
+          insertRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(insertRange);
+
+          // 尝试 execCommand 插入（以便可撤销）
+          try {
+            useExec = document.execCommand("insertHTML", false, htmlToInsert);
+          } catch {
+            useExec = false;
+          }
+
+          if (!useExec) {
+            // fallback: 直接插入节点（可能无法撤销）
+            const clone = parentDiv.cloneNode(true);
+            insertRange.insertNode(clone);
+          }
+
+          // 把光标放到新插入行的开头（尽量）
+          const nextEl = parentDiv.nextElementSibling as HTMLElement | null;
+          if (nextEl) {
+            const newRange = document.createRange();
+            const firstText = getFirstTextNode(nextEl);
+            if (firstText) {
+              newRange.setStart(firstText as Node, 0);
+            } else {
+              newRange.setStart(nextEl, 0);
+            }
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+
+          // 同步内容（用 setTimeout 让浏览器先完成 DOM 操作）
+          setTimeout(() => {
+            syncLinesFromEditor();
+            emit("update:modelValue", lines.value.join("\n"));
+          }, 0);
+
+          return;
+        } else {
+          // 有选区：复制选区内容（可能跨多行或部分行），并插入到选区末尾
+          const frag = range.cloneContents();
+          const tmp = document.createElement("div");
+          tmp.appendChild(frag);
+          htmlToInsert = tmp.innerHTML; // 含原来内部的 span/highlight
+
+          // collapse 到选区末尾，作为插入位置
+          const insertRange = range.cloneRange();
+          insertRange.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(insertRange);
+
+          try {
+            useExec = document.execCommand("insertHTML", false, htmlToInsert);
+          } catch {
+            useExec = false;
+          }
+
+          if (!useExec) {
+            // fallback: 转成节点并插入
+            const frag2 = document.createDocumentFragment();
+            const tmp2 = document.createElement("div");
+            tmp2.innerHTML = htmlToInsert;
+            Array.from(tmp2.childNodes).forEach((n) => frag2.appendChild(n));
+            insertRange.insertNode(frag2);
+          }
+
+          // 插入后将光标放在插入内容后面（execCommand 通常已如此）
+          setTimeout(() => {
+            syncLinesFromEditor();
+            emit("update:modelValue", lines.value.join("\n"));
+          }, 0);
+
+          return;
+        }
+      }
+
+      // ⬇️ 新增 Ctrl+L 快捷键（格式化 SQL）
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        const sel = window.getSelection();
+        if (!editor.value || !sel) return; // <-- 先判断 sel 非空
+
+        const range: Range | null =
+          sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+        let selectedText = "";
+
+        if (range && !range.collapsed) {
+          // 有选区
+          const frag = range.cloneContents();
+          const tmpDiv = document.createElement("div");
+          tmpDiv.appendChild(frag);
+          selectedText = tmpDiv.innerText;
+        } else {
+          // 没有选区：整个编辑器内容
+          selectedText = editor.value.innerText;
+        }
+
+        const formattedText = formatSQLForSelection(selectedText);
+
+        const htmlToInsert = formattedText
+          .split("\n")
+          .map((line) => `<div>${highlightLine(line)}</div>`)
+          .join("");
+
+        if (range && !range.collapsed) {
+          range.deleteContents();
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          editor.value.innerHTML = "";
+        }
+
+        try {
+          document.execCommand("insertHTML", false, htmlToInsert);
+        } catch {
+          // fallback
+          const frag = document.createDocumentFragment();
+          const tmp = document.createElement("div");
+          tmp.innerHTML = htmlToInsert;
+          Array.from(tmp.childNodes).forEach((n) => frag.appendChild(n));
+          if (range && !range.collapsed && sel)
+            sel.getRangeAt(0)?.insertNode(frag);
+          else editor.value.appendChild(frag);
+        }
+
+        // 更新行数组和 modelValue
+        setTimeout(() => {
+          syncLinesFromEditor();
+          emit("update:modelValue", lines.value.join("\n"));
+        }, 0);
+
+        nextTick(() => {
+          if (!editor.value || !sel) return; // <-- 再次判断 sel 非空
+          const lastDiv = editor.value.lastElementChild as HTMLElement | null;
+          if (!lastDiv) return;
+          const firstText = getFirstTextNode(lastDiv) || lastDiv;
+          const r = document.createRange();
+          r.setStart(firstText, firstText.textContent?.length ?? 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        });
+      }
+
       if (e.key === "Tab") {
         e.preventDefault();
         const selection = window.getSelection();

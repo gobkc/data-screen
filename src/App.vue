@@ -180,6 +180,8 @@
       <!-- right -->
       <div class="sidebar right">
         <h2>Right Panel</h2>
+        <XmlTree :data="xmlData" />
+
         <JsonTree :data="jsonData" />
         <CodeEditor v-model="code" width="100%" height="100%" />
         <button @click="addRow">新增空行</button>
@@ -189,6 +191,7 @@
           v-on:onSort="sortColumn"
           @onSelectRow="handleSelectRow"
           @onDeleteRow="handleDeleteRow"
+          @onUnDelete="handleUnDeleteRow"
         />
       </div>
     </div>
@@ -201,6 +204,8 @@ import JsonTree from "./components/JsonTree.vue";
 import type { JsonValue } from "./components/JsonTree.vue";
 import SimpleGridTable from "./components/SimpleGridTable.vue";
 import CodeEditor from "./components/CodeEditor.vue";
+import XmlTree from "./components/XmlTree.vue";
+
 import { ref } from "vue";
 
 const code = ref<string>(
@@ -255,8 +260,11 @@ const onUpdate = (payload: UpdatePayload) => {
 function handleSelectRow(rowData: Record<string, unknown>) {
   console.log("选中的行数据:", rowData);
 }
-function handleDeleteRow(rowData: Record<string, unknown>) {
-  console.log("delete row:", rowData);
+function handleDeleteRow(rowData: Record<string, unknown>[]) {
+  console.log("delete rows:", rowData);
+}
+function handleUnDeleteRow(rowData: Record<string, unknown>[]) {
+  console.log("undelete rows:", rowData);
 }
 function sortColumn(key: string, sort: string) {
   console.log("sord:", key, sort);
@@ -294,6 +302,18 @@ const stopDrag = () => {
   isDragging = false;
   document.removeEventListener("mousemove", onDrag);
   document.removeEventListener("mouseup", stopDrag);
+};
+
+const xmlData = {
+  aaa: {
+    ccc: true,
+    ddd: `<note>
+            <to>张三</to>
+            <from>李四</from>
+            <heading>提醒</heading>
+            <body>别忘了下午三点的会议！</body>
+          </note>`,
+  },
 };
 </script>
 
