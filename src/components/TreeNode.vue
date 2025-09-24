@@ -1,10 +1,68 @@
 <template>
   <div class="tree-node" @copy="handleCopy">
     <!-- 当前节点 -->
-    <div :style="{ paddingLeft: `${level * 16}px` }" class="node-label">
+    <div :style="{ marginLeft: `${level * 16}px` }">
       <!-- 折叠按钮 -->
-      <span v-if="showCollapseButton" class="collapse-toggle" @click="toggle">
-        {{ collapsed ? "+" : "-" }}
+      <span
+        v-if="showCollapseButton"
+        class="collapse-toggle"
+        @click="toggle"
+        style="margin-right: 5px"
+      >
+        <svg
+          v-if="collapsed"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="false"
+          focusable="false"
+          class="icon-plus"
+          role="img"
+        >
+          <title>展开</title>
+          <line
+            x1="8"
+            y1="3"
+            x2="8"
+            y2="13"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
+          <line
+            x1="3"
+            y1="8"
+            x2="13"
+            y2="8"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
+        </svg>
+
+        <svg
+          v-else
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="false"
+          focusable="false"
+          class="icon-minus"
+          role="img"
+        >
+          <title>收起</title>
+          <line
+            x1="3"
+            y1="8"
+            x2="13"
+            y2="8"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
+        </svg>
       </span>
 
       <!-- 单行显示无子节点 -->
@@ -12,7 +70,10 @@
         v-if="!hasChildren && node.name !== 'root' && node.name !== '#text'"
       >
         <span class="tag">
-          &lt;{{ node.name }}&gt;{{ node.value ?? "" }}&lt;/{{ node.name }}&gt;
+          &lt;{{ node.name }}&gt;<span class="value">{{
+            node.value ?? ""
+          }}</span
+          >&lt;/{{ node.name }}&gt;
         </span>
       </template>
 
@@ -148,16 +209,16 @@ export default defineComponent({
 }
 
 .tag {
-  color: var(--ds-theme-primary);
+  color: var(--ds-theme-secondary);
 }
 
 .value {
-  color: var(--ds-text-light);
+  color: var(--ds-theme-primary);
 }
 
 .collapse-toggle {
   cursor: pointer;
-  color: var(--ds-theme-secondary);
+  color: var(--ds-text);
   user-select: none;
   width: 16px;
   display: inline-block;

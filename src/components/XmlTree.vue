@@ -34,12 +34,17 @@ export default defineComponent({
 
       const parseElement = (el: Element): XmlNode => {
         const children: XmlNode[] = [];
+        let value: string | undefined = undefined;
+
         el.childNodes.forEach((child) => {
           if (child.nodeType === Node.ELEMENT_NODE) {
             children.push(parseElement(child as Element));
           } else if (child.nodeType === Node.TEXT_NODE) {
             const text = child.textContent?.trim();
-            if (text) children.push({ name: "#text", value: text });
+            if (text) {
+              // 如果只有文本节点，就直接作为 value
+              value = text;
+            }
           }
         });
 
@@ -48,7 +53,7 @@ export default defineComponent({
           attributes[attr.name] = attr.value;
         });
 
-        return { name: el.nodeName, attributes, children };
+        return { name: el.nodeName, attributes, children, value };
       };
 
       return parseElement(xmlDoc.documentElement);
@@ -92,7 +97,7 @@ export default defineComponent({
 <style scoped>
 .xml-tree {
   font-family: monospace;
-  background-color: var(--ds-theme-bg);
+  background-color: var(--ds-text-editor-bg-color);
   color: var(--ds-text);
   padding: 10px;
   border-radius: 6px;
